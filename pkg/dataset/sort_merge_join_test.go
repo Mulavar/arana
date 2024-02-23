@@ -165,13 +165,13 @@ func testCase3() (*VirtualDataset, *VirtualDataset) {
 
 func TestInnerSortMergeJoin_Next(t *testing.T) {
 	fieldsAll := FieldsAll()
-	// test case 1: outer value [0,1,2,3,4,5,6,7,8,9], inner value [5,6,7,8,9,10,11,12,13,14]
+	// test case 1: leftDs value [0,1,2,3,4,5,6,7,8,9], rightDs value [5,6,7,8,9,10,11,12,13,14]
 	outer1, inner1 := testCase1()
 
-	// test case 2: outer value [2,2,3], inner value [2,2,4]
+	// test case 2: leftDs value [2,2,3], rightDs value [2,2,4]
 	outer2, inner2 := testCase2()
 
-	// test case 3: outer value [1,2,3], inner value [4,5,6]
+	// test case 3: leftDs value [1,2,3], rightDs value [4,5,6]
 	outer3, inner3 := testCase3()
 
 	type fields struct {
@@ -189,11 +189,11 @@ func TestInnerSortMergeJoin_Next(t *testing.T) {
 		wantErr assert.ErrorAssertionFunc
 	}{
 		{
-			name: "test case inner join",
+			name: "test case rightDs join",
 			fields: fields{
 				fields: fieldsAll,
 				joinColumn: &JoinColumn{
-					column: "id",
+					Column: "id",
 				},
 				joinType: ast.InnerJoin,
 				outer:    outer1,
@@ -201,11 +201,11 @@ func TestInnerSortMergeJoin_Next(t *testing.T) {
 			},
 		},
 		{
-			name: "test case inner join",
+			name: "test case rightDs join",
 			fields: fields{
 				fields: fieldsAll,
 				joinColumn: &JoinColumn{
-					column: "id",
+					Column: "id",
 				},
 				joinType: ast.InnerJoin,
 				outer:    outer2,
@@ -213,11 +213,11 @@ func TestInnerSortMergeJoin_Next(t *testing.T) {
 			},
 		},
 		{
-			name: "test case inner join",
+			name: "test case rightDs join",
 			fields: fields{
 				fields: fieldsAll,
 				joinColumn: &JoinColumn{
-					column: "id",
+					Column: "id",
 				},
 				joinType: ast.InnerJoin,
 				outer:    outer3,
@@ -227,7 +227,7 @@ func TestInnerSortMergeJoin_Next(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, _ := NewSortMergeJoin(tt.fields.joinType, tt.fields.joinColumn, tt.fields.outer, tt.fields.inner)
+			s, _ := NewSortMergeJoinDataSet(tt.fields.joinType, tt.fields.joinColumn, tt.fields.outer, tt.fields.inner)
 			for {
 				row, err := s.Next()
 				if err == io.EOF {
@@ -248,13 +248,13 @@ func TestInnerSortMergeJoin_Next(t *testing.T) {
 func TestLeftSortMergeJoin_Next(t *testing.T) {
 	fieldsAll := FieldsAll()
 
-	// test case 1: outer value [0,1,2,3,4,5,6,7,8,9], inner value [5,6,7,8,9,10,11,12,13,14]
+	// test case 1: leftDs value [0,1,2,3,4,5,6,7,8,9], rightDs value [5,6,7,8,9,10,11,12,13,14]
 	outer1, inner1 := testCase1()
 
-	// test case 2: outer value [2,2,3], inner value [2,2,4]
+	// test case 2: leftDs value [2,2,3], rightDs value [2,2,4]
 	outer2, inner2 := testCase2()
 
-	// test case 3: outer value [1,2,3], inner value [4,5,6]
+	// test case 3: leftDs value [1,2,3], rightDs value [4,5,6]
 	outer3, inner3 := testCase3()
 
 	type fields struct {
@@ -276,7 +276,7 @@ func TestLeftSortMergeJoin_Next(t *testing.T) {
 			fields: fields{
 				fields: fieldsAll,
 				joinColumn: &JoinColumn{
-					column: "id",
+					Column: "id",
 				},
 				joinType: ast.LeftJoin,
 				outer:    outer1,
@@ -288,7 +288,7 @@ func TestLeftSortMergeJoin_Next(t *testing.T) {
 			fields: fields{
 				fields: fieldsAll,
 				joinColumn: &JoinColumn{
-					column: "id",
+					Column: "id",
 				},
 				joinType: ast.LeftJoin,
 				outer:    outer2,
@@ -300,7 +300,7 @@ func TestLeftSortMergeJoin_Next(t *testing.T) {
 			fields: fields{
 				fields: fieldsAll,
 				joinColumn: &JoinColumn{
-					column: "id",
+					Column: "id",
 				},
 				joinType: ast.LeftJoin,
 				outer:    outer3,
@@ -310,7 +310,7 @@ func TestLeftSortMergeJoin_Next(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, _ := NewSortMergeJoin(tt.fields.joinType, tt.fields.joinColumn, tt.fields.outer, tt.fields.inner)
+			s, _ := NewSortMergeJoinDataSet(tt.fields.joinType, tt.fields.joinColumn, tt.fields.outer, tt.fields.inner)
 			for {
 				row, err := s.Next()
 				if err == io.EOF {
@@ -331,13 +331,13 @@ func TestLeftSortMergeJoin_Next(t *testing.T) {
 func TestRightSortMergeJoin_Next(t *testing.T) {
 	fieldsAll := FieldsAll()
 
-	// test case 1: outer value [0,1,2,3,4,5,6,7,8,9], inner value [5,6,7,8,9,10,11,12,13,14]
+	// test case 1: leftDs value [0,1,2,3,4,5,6,7,8,9], rightDs value [5,6,7,8,9,10,11,12,13,14]
 	outer1, inner1 := testCase1()
 
-	// test case 2: outer value [2,2,3], inner value [2,2,4]
+	// test case 2: leftDs value [2,2,3], rightDs value [2,2,4]
 	outer2, inner2 := testCase2()
 
-	// test case 3: outer value [1,2,3], inner value [4,5,6]
+	// test case 3: leftDs value [1,2,3], rightDs value [4,5,6]
 	outer3, inner3 := testCase3()
 
 	type fields struct {
@@ -359,7 +359,7 @@ func TestRightSortMergeJoin_Next(t *testing.T) {
 			fields: fields{
 				fields: fieldsAll,
 				joinColumn: &JoinColumn{
-					column: "id",
+					Column: "id",
 				},
 				joinType: ast.RightJoin,
 				outer:    outer1,
@@ -371,7 +371,7 @@ func TestRightSortMergeJoin_Next(t *testing.T) {
 			fields: fields{
 				fields: fieldsAll,
 				joinColumn: &JoinColumn{
-					column: "id",
+					Column: "id",
 				},
 				joinType: ast.RightJoin,
 				outer:    outer2,
@@ -383,7 +383,7 @@ func TestRightSortMergeJoin_Next(t *testing.T) {
 			fields: fields{
 				fields: fieldsAll,
 				joinColumn: &JoinColumn{
-					column: "id",
+					Column: "id",
 				},
 				joinType: ast.RightJoin,
 				outer:    outer3,
@@ -393,7 +393,7 @@ func TestRightSortMergeJoin_Next(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, _ := NewSortMergeJoin(tt.fields.joinType, tt.fields.joinColumn, tt.fields.outer, tt.fields.inner)
+			s, _ := NewSortMergeJoinDataSet(tt.fields.joinType, tt.fields.joinColumn, tt.fields.outer, tt.fields.inner)
 			for {
 				row, err := s.Next()
 				if err == io.EOF {
