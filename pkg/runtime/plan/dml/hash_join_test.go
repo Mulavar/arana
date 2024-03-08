@@ -114,9 +114,9 @@ func TestHashJoinPlan(t *testing.T) {
 				},
 			},
 		},
-		IsFilterProbeRow: true,
-		BuildKey:         "uid",
-		ProbeKey:         "emp_no",
+		IsInnerJoin: true,
+		BuildKey:    "uid",
+		ProbeKey:    "emp_no",
 	}
 
 	res, err := plan.ExecIn(ctx, conn)

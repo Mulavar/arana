@@ -47,7 +47,7 @@ type HashJoinPlan struct {
 	BuildKey         string
 	ProbeKey         string
 	hashArea         map[string]proto.Row
-	IsFilterProbeRow bool
+	IsInnerJoin      bool
 	IsReversedColumn bool
 
 	Stmt *ast.SelectStatement
@@ -145,7 +145,8 @@ func (h *HashJoinPlan) probe(ctx context.Context, conn proto.VConn, buildDataset
 	cn := h.ProbeKey
 	filterFunc := func(row proto.Row) bool {
 		findRow := probeMapFunc(row, cn)
-		if !h.IsFilterProbeRow {
+		// if this is outer join, do not filter null value
+		if !h.IsInnerJoin {
 			return true
 		}
 

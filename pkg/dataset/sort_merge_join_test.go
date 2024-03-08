@@ -176,7 +176,7 @@ func TestInnerSortMergeJoin_Next(t *testing.T) {
 
 	type fields struct {
 		fields     []proto.Field
-		joinColumn *JoinColumn
+		joinColumn *JoinKey
 		joinType   ast.JoinType
 		outer      proto.Dataset
 		inner      proto.Dataset
@@ -192,8 +192,9 @@ func TestInnerSortMergeJoin_Next(t *testing.T) {
 			name: "test case rightDs join",
 			fields: fields{
 				fields: fieldsAll,
-				joinColumn: &JoinColumn{
-					Column: "id",
+				joinColumn: &JoinKey{
+					LeftKey:  "id",
+					RightKey: "id",
 				},
 				joinType: ast.InnerJoin,
 				outer:    outer1,
@@ -204,8 +205,9 @@ func TestInnerSortMergeJoin_Next(t *testing.T) {
 			name: "test case rightDs join",
 			fields: fields{
 				fields: fieldsAll,
-				joinColumn: &JoinColumn{
-					Column: "id",
+				joinColumn: &JoinKey{
+					LeftKey:  "id",
+					RightKey: "id",
 				},
 				joinType: ast.InnerJoin,
 				outer:    outer2,
@@ -216,8 +218,9 @@ func TestInnerSortMergeJoin_Next(t *testing.T) {
 			name: "test case rightDs join",
 			fields: fields{
 				fields: fieldsAll,
-				joinColumn: &JoinColumn{
-					Column: "id",
+				joinColumn: &JoinKey{
+					LeftKey:  "id",
+					RightKey: "id",
 				},
 				joinType: ast.InnerJoin,
 				outer:    outer3,
@@ -259,7 +262,7 @@ func TestLeftSortMergeJoin_Next(t *testing.T) {
 
 	type fields struct {
 		fields     []proto.Field
-		joinColumn *JoinColumn
+		joinColumn *JoinKey
 		joinType   ast.JoinType
 		outer      proto.Dataset
 		inner      proto.Dataset
@@ -275,8 +278,9 @@ func TestLeftSortMergeJoin_Next(t *testing.T) {
 			name: "test case left join",
 			fields: fields{
 				fields: fieldsAll,
-				joinColumn: &JoinColumn{
-					Column: "id",
+				joinColumn: &JoinKey{
+					LeftKey:  "id",
+					RightKey: "id",
 				},
 				joinType: ast.LeftJoin,
 				outer:    outer1,
@@ -287,8 +291,9 @@ func TestLeftSortMergeJoin_Next(t *testing.T) {
 			name: "test case left join",
 			fields: fields{
 				fields: fieldsAll,
-				joinColumn: &JoinColumn{
-					Column: "id",
+				joinColumn: &JoinKey{
+					LeftKey:  "id",
+					RightKey: "id",
 				},
 				joinType: ast.LeftJoin,
 				outer:    outer2,
@@ -299,8 +304,9 @@ func TestLeftSortMergeJoin_Next(t *testing.T) {
 			name: "test case left join",
 			fields: fields{
 				fields: fieldsAll,
-				joinColumn: &JoinColumn{
-					Column: "id",
+				joinColumn: &JoinKey{
+					LeftKey:  "id",
+					RightKey: "id",
 				},
 				joinType: ast.LeftJoin,
 				outer:    outer3,
@@ -342,7 +348,7 @@ func TestRightSortMergeJoin_Next(t *testing.T) {
 
 	type fields struct {
 		fields     []proto.Field
-		joinColumn *JoinColumn
+		joinColumn *JoinKey
 		joinType   ast.JoinType
 		outer      proto.Dataset
 		inner      proto.Dataset
@@ -358,8 +364,9 @@ func TestRightSortMergeJoin_Next(t *testing.T) {
 			name: "test case right join",
 			fields: fields{
 				fields: fieldsAll,
-				joinColumn: &JoinColumn{
-					Column: "id",
+				joinColumn: &JoinKey{
+					LeftKey:  "id",
+					RightKey: "id",
 				},
 				joinType: ast.RightJoin,
 				outer:    outer1,
@@ -370,8 +377,9 @@ func TestRightSortMergeJoin_Next(t *testing.T) {
 			name: "test case right join",
 			fields: fields{
 				fields: fieldsAll,
-				joinColumn: &JoinColumn{
-					Column: "id",
+				joinColumn: &JoinKey{
+					LeftKey:  "id",
+					RightKey: "id",
 				},
 				joinType: ast.RightJoin,
 				outer:    outer2,
@@ -382,8 +390,9 @@ func TestRightSortMergeJoin_Next(t *testing.T) {
 			name: "test case right join",
 			fields: fields{
 				fields: fieldsAll,
-				joinColumn: &JoinColumn{
-					Column: "id",
+				joinColumn: &JoinKey{
+					LeftKey:  "id",
+					RightKey: "id",
 				},
 				joinType: ast.RightJoin,
 				outer:    outer3,

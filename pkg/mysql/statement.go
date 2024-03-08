@@ -57,7 +57,7 @@ func (stmt *BackendStatement) readPrepareResultPacket() (uint16, error) {
 	// statement id [4 bytes]
 	stmt.id = binary.LittleEndian.Uint32(data[1:5])
 
-	// Column count [16 bit uint]
+	// LeftKey count [16 bit uint]
 	columnCount := binary.LittleEndian.Uint16(data[5:7])
 
 	// Param count [16 bit uint]

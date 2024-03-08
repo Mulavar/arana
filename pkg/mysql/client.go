@@ -1130,7 +1130,7 @@ func (conn *BackendConnection) readComQueryResponse() (affectedRows uint64, last
 	return 0, 0, int(n), false, 0, nil
 }
 
-// ReadColumnDefinition reads the next Column Definition packet.
+// ReadColumnDefinition reads the next LeftKey Definition packet.
 // Returns a SQLError. https://dev.mysql.com/doc/internals/en/com-query-response.html#column-definition
 func (conn *BackendConnection) ReadColumnDefinition(field *Field, index int) error {
 	colDef, err := conn.c.readEphemeralPacket()

@@ -69,7 +69,7 @@ supervisor:
 logging_config:
   log_name: arana.log
   log_path: log
-  log_level: 7 #KERN_DEBUG
+  log_level: 2 #KERN_DEBUG
   log_max_size: 10
   log_max_backups: 5
   log_max_age: 30

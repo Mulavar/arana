@@ -44,12 +44,12 @@ const (
 	NotDescartes = false
 )
 
-// SortMergeJoinDataSet assume all leftDs data and rightDs data are sorted by join Column
+// SortMergeJoinDataSet assume all leftDs data and rightDs data are sorted by join LeftKey
 type SortMergeJoinDataSet struct {
 	// fields is the union of leftDs fields and rightDs fields
 	fields []proto.Field
-	// now only support one Column join
-	joinColumn *JoinColumn
+	// now only support one LeftKey join
+	joinKey *JoinKey
 	// joinType rightDs join, left join, right join
 	joinType ast.JoinType
 	leftDs   proto.Dataset
@@ -68,7 +68,7 @@ type SortMergeJoinDataSet struct {
 	rwLock        sync.RWMutex
 }
 
-func NewSortMergeJoinDataSet(joinType ast.JoinType, joinColumn *JoinColumn, leftDs proto.Dataset, rightDs proto.Dataset) (*SortMergeJoinDataSet, error) {
+func NewSortMergeJoinDataSet(joinType ast.JoinType, joinColumn *JoinKey, leftDs proto.Dataset, rightDs proto.Dataset) (*SortMergeJoinDataSet, error) {
 	leftFields, err := leftDs.Fields()
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -85,12 +85,12 @@ func NewSortMergeJoinDataSet(joinType ast.JoinType, joinColumn *JoinColumn, left
 
 	if joinType == ast.RightJoin {
 		leftDs, rightDs = rightDs, leftDs
-		joinColumn.Column, joinColumn.RightColumn = joinColumn.RightColumn, joinColumn.Column
+		joinColumn.LeftKey, joinColumn.RightKey = joinColumn.RightKey, joinColumn.LeftKey
 	}
 
 	return &SortMergeJoinDataSet{
 		fields:     fields,
-		joinColumn: joinColumn,
+		joinKey:    joinColumn,
 		joinType:   joinType,
 		leftDs:     leftDs,
 		rightDs:    rightDs,
@@ -183,9 +183,9 @@ func (s *SortMergeJoinDataSet) DescartesFlag() bool {
 	return false
 }
 
-type JoinColumn struct {
-	Column      string
-	RightColumn string
+type JoinKey struct {
+	LeftKey  string
+	RightKey string
 }
 
 func (s *SortMergeJoinDataSet) Close() error {
@@ -238,12 +238,12 @@ func (s *SortMergeJoinDataSet) innerJoin(leftRow proto.Row, rightRow proto.Row) 
 			return nil, io.EOF
 		}
 
-		leftValue, err = leftRow.(proto.KeyedRow).Get(s.joinColumn.Column)
+		leftValue, err = leftRow.(proto.KeyedRow).Get(s.joinKey.LeftKey)
 		if err != nil {
 			return nil, err
 		}
 
-		rightValue, err = rightRow.(proto.KeyedRow).Get(s.joinColumn.RightColumn)
+		rightValue, err = rightRow.(proto.KeyedRow).Get(s.joinKey.RightKey)
 		if err != nil {
 			return nil, err
 		}
@@ -272,7 +272,7 @@ func (s *SortMergeJoinDataSet) innerJoin(leftRow proto.Row, rightRow proto.Row) 
 			}
 
 			// if leftDs row equal last row, do descartes match
-			leftValue, err = leftRow.(proto.KeyedRow).Get(s.joinColumn.Column)
+			leftValue, err = leftRow.(proto.KeyedRow).Get(s.joinKey.LeftKey)
 			if err != nil {
 				return nil, err
 			}
@@ -311,7 +311,7 @@ func (s *SortMergeJoinDataSet) outerJoin(leftRow proto.Row, rightRow proto.Row) 
 
 		if rightRow == nil {
 			s.lastRow = nil
-			outerValue, err = leftRow.(proto.KeyedRow).Get(s.joinColumn.Column)
+			outerValue, err = leftRow.(proto.KeyedRow).Get(s.joinKey.LeftKey)
 			if err != nil {
 				return nil, err
 			}
@@ -327,12 +327,12 @@ func (s *SortMergeJoinDataSet) outerJoin(leftRow proto.Row, rightRow proto.Row) 
 			return s.resGenerate(leftRow, nil), nil
 		}
 
-		outerValue, err = leftRow.(proto.KeyedRow).Get(s.joinColumn.Column)
+		outerValue, err = leftRow.(proto.KeyedRow).Get(s.joinKey.LeftKey)
 		if err != nil {
 			return nil, err
 		}
 
-		innerValue, err = rightRow.(proto.KeyedRow).Get(s.joinColumn.Column)
+		innerValue, err = rightRow.(proto.KeyedRow).Get(s.joinKey.RightKey)
 		if err != nil {
 			return nil, err
 		}
@@ -354,7 +354,7 @@ func (s *SortMergeJoinDataSet) outerJoin(leftRow proto.Row, rightRow proto.Row) 
 
 			if nextOuterRow != nil {
 				// if leftDs row equal last row, do descartes match
-				nextOuterValue, err := nextOuterRow.(proto.KeyedRow).Get(s.joinColumn.Column)
+				nextOuterValue, err := nextOuterRow.(proto.KeyedRow).Get(s.joinKey.LeftKey)
 				if err != nil {
 					return nil, err
 				}
@@ -401,11 +401,11 @@ func (s *SortMergeJoinDataSet) outerJoin(leftRow proto.Row, rightRow proto.Row) 
 }
 
 func (s *SortMergeJoinDataSet) getOuterRow() (proto.Row, error) {
-	nextOuterRow := s.nextOuterRow
-	if nextOuterRow != nil {
-		s.nextOuterRow = nil
-		return nextOuterRow, nil
-	}
+	//a := s.nextOuterRow
+	//if a != nil {
+	//	s.nextOuterRow = nil
+	//	return a, nil
+	//}
 
 	leftRow, err := s.leftDs.Next()
 	if err != nil && errors.Is(err, io.EOF) {
@@ -420,7 +420,7 @@ func (s *SortMergeJoinDataSet) getOuterRow() (proto.Row, error) {
 
 func (s *SortMergeJoinDataSet) getInnerRow(outerRow proto.Row) (proto.Row, error) {
 	if outerRow != nil {
-		outerValue, err := outerRow.(proto.KeyedRow).Get(s.joinColumn.Column)
+		outerValue, err := outerRow.(proto.KeyedRow).Get(s.joinKey.LeftKey)
 		if err != nil {
 			return nil, err
 		}
@@ -531,7 +531,7 @@ func (s *SortMergeJoinDataSet) updateLastRow(outerRow proto.Row, outerValue prot
 func (s *SortMergeJoinDataSet) greaterCompare(outerRow proto.Row) (proto.Row, proto.Row, error) {
 	s.lastRow = nil
 	// if leftDs row equal last row, do descartes match
-	outerValue, err := outerRow.(proto.KeyedRow).Get(s.joinColumn.Column)
+	outerValue, err := outerRow.(proto.KeyedRow).Get(s.joinKey.LeftKey)
 	if err != nil {
 		return nil, nil, err
 	}

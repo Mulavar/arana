@@ -460,13 +460,27 @@ func optimizeJoin(ctx context.Context, o *optimize.Optimizer, stmt *ast.SelectSt
 	}
 
 	from := stmt.From[0]
+	//dbLeft, aliasLeft, sTableLeft, tableLeft, shardsLeft, err := compute(&from.TableSourceItem)
 	dbLeft, aliasLeft, tableLeft, shardsLeft, err := compute(&from.TableSourceItem)
+	if err != nil {
+		return nil, err
+	}
+	leftTblMeta, err := loadMetadataByTable(ctx, tableLeft.Suffix())
 	if err != nil {
 		return nil, err
 	}
 
 	join := from.Joins[0]
+	//dbRight, aliasRight, sTableRight, tableRight, shardsRight, err := compute(join.Target)
 	dbRight, aliasRight, tableRight, shardsRight, err := compute(join.Target)
+	if err != nil {
+		return nil, err
+	}
+	var tmp = tableRight.Suffix()
+	if shardsRight != nil {
+		_, tmp = shardsRight.Smallest()
+	}
+	rightTblMeta, err := loadMetadataByTable(ctx, tmp)
 	if err != nil {
 		return nil, err
 	}
@@ -517,7 +531,8 @@ func optimizeJoin(ctx context.Context, o *optimize.Optimizer, stmt *ast.SelectSt
 		return nil, errors.Errorf("not found buildKey or probeKey")
 	}
 
-	rewriteToSingle := func(tableSource ast.TableSourceItem, shards map[string][]string, onKey string) (proto.Plan, error) {
+	shouldSortMerge := shouldSortMergeJoin(leftTblMeta, rightTblMeta, leftKey, rightKey)
+	rewriteToSingle := func(tableSource ast.TableSourceItem, shards map[string][]string, onKey string, addOrderBy bool) (proto.Plan, error) {
 		selectStmt := &ast.SelectStatement{
 			Select: stmt.Select,
 			From: ast.FromNode{
@@ -553,7 +568,8 @@ func optimizeJoin(ctx context.Context, o *optimize.Optimizer, stmt *ast.SelectSt
 					}
 				}
 			}
-			selectElements = append(selectElements, ast.NewSelectElementColumn([]string{onKey}, ""))
+
+			//selectElements = append(selectElements, ast.NewSelectElementColumn([]string{onKey}, ""))
 			selectStmt.Select = selectElements
 		}
 
@@ -565,6 +581,14 @@ func optimizeJoin(ctx context.Context, o *optimize.Optimizer, stmt *ast.SelectSt
 			}
 		}
 
+		if shouldSortMerge {
+			orderByItem := &ast.OrderByItem{
+				Expr: ast.ColumnNameExpressionAtom([]string{onKey}),
+				Desc: false,
+			}
+			selectStmt.OrderBy = []*ast.OrderByItem{orderByItem}
+		}
+
 		optimizer := &optimize.Optimizer{
 			Rule: o.Rule,
 			Stmt: selectStmt,
@@ -574,7 +598,7 @@ func optimizeJoin(ctx context.Context, o *optimize.Optimizer, stmt *ast.SelectSt
 				return nil, err
 			}
 
-			selectStmt.Select = append(selectStmt.Select, ast.NewSelectElementColumn([]string{onKey}, ""))
+			//selectStmt.Select = append(selectStmt.Select, ast.NewSelectElementColumn([]string{onKey}, ""))
 		}
 
 		plan, err := optimizeSelect(ctx, optimizer)
@@ -584,40 +608,54 @@ func optimizeJoin(ctx context.Context, o *optimize.Optimizer, stmt *ast.SelectSt
 		return plan, nil
 	}
 
-	leftPlan, err := rewriteToSingle(from.TableSourceItem, shardsLeft, leftKey)
+	leftPlan, err := rewriteToSingle(from.TableSourceItem, shardsLeft, leftKey, shouldSortMerge)
 	if err != nil {
 		return nil, err
 	}
 
-	rightPlan, err := rewriteToSingle(*from.Joins[0].Target, shardsRight, rightKey)
+	rightPlan, err := rewriteToSingle(*from.Joins[0].Target, shardsRight, rightKey, shouldSortMerge)
 	if err != nil {
 		return nil, err
-	}
-
-	setPlan := func(plan *dml.HashJoinPlan, buildPlan, probePlan proto.Plan, buildKey, probeKey string) {
-		plan.BuildKey = buildKey
-		plan.ProbeKey = probeKey
-		plan.BuildPlan = buildPlan
-		plan.ProbePlan = probePlan
-	}
-
-	if join.Typ == ast.InnerJoin {
-		setPlan(hashJoinPlan, leftPlan, rightPlan, leftKey, rightKey)
-		hashJoinPlan.IsFilterProbeRow = true
-	} else {
-		hashJoinPlan.IsFilterProbeRow = false
-		if join.Typ == ast.LeftJoin {
-			hashJoinPlan.IsReversedColumn = true
-			setPlan(hashJoinPlan, rightPlan, leftPlan, rightKey, leftKey)
-		} else if join.Typ == ast.RightJoin {
-			setPlan(hashJoinPlan, leftPlan, rightPlan, leftKey, rightKey)
-		} else {
-			return nil, errors.New("not support Join Type")
-		}
 	}
 
 	var tmpPlan proto.Plan
-	tmpPlan = hashJoinPlan
+
+	if shouldSortMerge {
+		//if false {
+		tmpPlan = &dml.SortMergeJoin{
+			Stmt:       stmt,
+			LeftQuery:  leftPlan,
+			RightQuery: rightPlan,
+			JoinType:   join.Typ,
+			// TODO now only support equal column join
+			LeftKey:  leftKey,
+			RightKey: rightKey,
+		}
+	} else {
+		setPlan := func(plan *dml.HashJoinPlan, buildPlan, probePlan proto.Plan, buildKey, probeKey string) {
+			plan.BuildKey = buildKey
+			plan.ProbeKey = probeKey
+			plan.BuildPlan = buildPlan
+			plan.ProbePlan = probePlan
+		}
+
+		if join.Typ == ast.InnerJoin {
+			setPlan(hashJoinPlan, leftPlan, rightPlan, leftKey, rightKey)
+			hashJoinPlan.IsInnerJoin = true
+		} else {
+			hashJoinPlan.IsInnerJoin = false
+			if join.Typ == ast.LeftJoin {
+				hashJoinPlan.IsReversedColumn = true
+				setPlan(hashJoinPlan, rightPlan, leftPlan, rightKey, leftKey)
+			} else if join.Typ == ast.RightJoin {
+				setPlan(hashJoinPlan, leftPlan, rightPlan, leftKey, rightKey)
+			} else {
+				return nil, errors.New("not support Join Type")
+			}
+		}
+
+		tmpPlan = hashJoinPlan
+	}
 
 	var (
 		analysis selectResult
@@ -698,6 +736,10 @@ func optimizeJoin(ctx context.Context, o *optimize.Optimizer, stmt *ast.SelectSt
 		RenameList: analysis.normalizedFields,
 	}
 	return tmpPlan, nil
+}
+
+func shouldSortMergeJoin(leftTblMeta, rightTblMeta *proto.TableMetadata, leftKey, rightKey string) bool {
+	return leftTblMeta.Indexes[leftKey] != nil && rightTblMeta.Indexes[rightKey] != nil
 }
 
 func getSelectFlag(ru *rule.Rule, stmt *ast.SelectStatement) (flag uint32) {
